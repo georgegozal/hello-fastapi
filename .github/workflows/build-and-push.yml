@@ -15,11 +15,22 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image_tag: ${{ steps.meta.outputs.version }}
-      image_ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+      image_tag: ${{ steps.ver.outputs.tag }}
+      image_ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.ver.outputs.tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # The commit-SHA tag, computed once and used for BOTH what gets deployed
+      # and what the app reports at /version. metadata-action's `version`
+      # output is NOT this: with `type=raw,value=latest` listed first it
+      # resolves to "latest", so using it meant CI always deployed the moving
+      # tag and /version always answered "latest" — no traceability at all.
+      # Derived from GITHUB_SHA (the same source metadata-action uses for
+      # type=sha) so the two always agree.
+      - name: Compute commit tag
+        id: ver
+        run: echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -46,7 +57,7 @@ jobs:
           context: .
           push: true
           build-args: |
-            APP_VERSION=${{ steps.meta.outputs.version }}
+            APP_VERSION=${{ steps.ver.outputs.tag }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
