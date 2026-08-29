@@ -63,6 +63,8 @@ jobs:
           IMAGE_REF: ${{ needs.build-and-push.outputs.image_ref }}
         run: |
           set -euo pipefail
+          : "${DEPLOY_WEBHOOK_URL:?DEPLOY_WEBHOOK_URL secret is not set on this repo}"
+          : "${DEPLOY_WEBHOOK_SECRET:?DEPLOY_WEBHOOK_SECRET secret is not set on this repo}"
           PAYLOAD=$(printf '{"service":"hello-fastapi","image":"%s"}' "$IMAGE_REF")
           SIGNATURE=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -hmac "$DEPLOY_WEBHOOK_SECRET" | sed 's/^.* //')
           curl --fail --silent --show-error \
