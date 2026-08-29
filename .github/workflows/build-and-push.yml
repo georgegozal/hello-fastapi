@@ -65,6 +65,11 @@ jobs:
           set -euo pipefail
           : "${DEPLOY_WEBHOOK_URL:?DEPLOY_WEBHOOK_URL secret is not set on this repo}"
           : "${DEPLOY_WEBHOOK_SECRET:?DEPLOY_WEBHOOK_SECRET secret is not set on this repo}"
+          # Strip stray whitespace/newlines a copy-paste into the GitHub
+          # secrets UI can silently leave in the stored value — a trailing
+          # "\n" makes curl reject the URL as malformed.
+          DEPLOY_WEBHOOK_URL=$(printf '%s' "$DEPLOY_WEBHOOK_URL" | tr -d '[:space:]')
+          DEPLOY_WEBHOOK_SECRET=$(printf '%s' "$DEPLOY_WEBHOOK_SECRET" | tr -d '[:space:]')
           PAYLOAD=$(printf '{"service":"hello-fastapi","image":"%s"}' "$IMAGE_REF")
           SIGNATURE=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -hmac "$DEPLOY_WEBHOOK_SECRET" | sed 's/^.* //')
           curl --fail --silent --show-error \
